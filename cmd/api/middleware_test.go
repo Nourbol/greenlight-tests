@@ -79,11 +79,18 @@ func TestRateLimit(t *testing.T) {
 			expectedCode: http.StatusInternalServerError,
 			hostname:     "invalid_hostname-",
 		},
+		{
+			name:         "Disabled rate limiter",
+			enabled:      false,
+			handlerCalls: 2,
+			rps:          1,
+			burst:        1,
+			expectedCode: http.StatusOK,
+		},
 	}
 
 	for i, e := range tests {
 
-		statusCodes := make(map[int]struct{})
 		req := httptest.NewRequest("GET", "http://testing", nil)
 
 		if e.hostname == "" {
@@ -102,12 +109,14 @@ func TestRateLimit(t *testing.T) {
 			enabled: e.enabled,
 		}
 
+		var lastStatusCode int
+
 		for i := 0; i < e.handlerCalls; i++ {
 			handlerToTest.ServeHTTP(rr, req)
-			statusCodes[rr.Code] = struct{}{}
+			lastStatusCode = rr.Code
 		}
 
-		if _, found := statusCodes[e.expectedCode]; !found {
+		if e.expectedCode != lastStatusCode {
 			t.Errorf("%s: there is no response with %d code", e.name, e.expectedCode)
 		}
 	}
