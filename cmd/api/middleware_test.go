@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"greenlight.bcc/internal/data"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -118,6 +119,78 @@ func TestRateLimit(t *testing.T) {
 
 		if e.expectedCode != lastStatusCode {
 			t.Errorf("%s: there is no response with %d code", e.name, e.expectedCode)
+		}
+	}
+}
+
+func TestAuthenticate(t *testing.T) {
+	app := newTestApplication(t)
+
+	tests := []struct {
+		name                     string
+		authorizationHeaderValue string
+		expectedCode             int
+		mustBeAnonymous          bool
+	}{
+		{
+			name:            "Without authentication",
+			expectedCode:    http.StatusOK,
+			mustBeAnonymous: true,
+		},
+		{
+			name:                     "With valid token",
+			authorizationHeaderValue: "Bearer eyJhbGciO.eyJzNTY3ODI.SflK",
+			expectedCode:             http.StatusOK,
+		},
+		{
+			name:                     "Without Bearer prefix",
+			authorizationHeaderValue: "eyJhbGciO.eyJzNTY3ODI.SflK",
+			expectedCode:             http.StatusUnauthorized,
+		},
+		{
+			name:                     "Token is not 26 bytes long",
+			authorizationHeaderValue: "Bearer eyJhbGciO.eyJzNTY3ODI.SflKsG",
+			expectedCode:             http.StatusUnauthorized,
+		},
+		{
+			name:                     "Without Bearer prefix",
+			authorizationHeaderValue: "eyJhbGciO.eyJzNTY3ODI.SflK",
+			expectedCode:             http.StatusUnauthorized,
+		},
+		{
+			name:                     "Non-existent token",
+			authorizationHeaderValue: "Bearer non_ex_token.DIDgtWaS.SflK",
+			expectedCode:             http.StatusUnauthorized,
+		},
+		{
+			name:                     "Non-existent token",
+			authorizationHeaderValue: "Bearer non_ex_token.unexpec_error",
+			expectedCode:             http.StatusInternalServerError,
+		},
+	}
+
+	for _, e := range tests {
+
+		nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, ok := r.Context().Value(userContextKey).(*data.User)
+			if !ok {
+				t.Fatalf("%s: no user in context", e.name)
+			}
+			if e.mustBeAnonymous != user.IsAnonymous() {
+				t.Errorf("%s: expected user to be anonymous", e.name)
+			}
+		})
+
+		handlerToTest := app.authenticate(nextHandler)
+
+		req := httptest.NewRequest("GET", "http://testing", nil)
+		req.Header.Add("Authorization", e.authorizationHeaderValue)
+		rr := httptest.NewRecorder()
+
+		handlerToTest.ServeHTTP(rr, req)
+
+		if rr.Code != e.expectedCode {
+			t.Errorf("%s: expected %d but got %d", e.name, e.expectedCode, rr.Code)
 		}
 	}
 }

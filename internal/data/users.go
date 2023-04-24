@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"database/sql" // New import
 	"errors"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -225,5 +226,19 @@ func (m MockUserModel) Update(user *User) error {
 }
 
 func (m MockUserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error) {
-	return nil, nil
+	if !strings.Contains(tokenPlaintext, "non_ex_token") {
+		return &User{
+			ID:        1,
+			CreatedAt: time.Now(),
+			Name:      "John Doe",
+			Email:     "johndoe@greenlight.test",
+			Password:  password{},
+			Activated: true,
+			Version:   0,
+		}, nil
+	}
+	if strings.Contains(tokenPlaintext, "unexpec_error") {
+		return nil, errors.New("any other errors")
+	}
+	return nil, ErrRecordNotFound
 }
