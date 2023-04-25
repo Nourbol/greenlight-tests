@@ -3,6 +3,7 @@ package data
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/lib/pq"
@@ -71,7 +72,13 @@ func (m PermissionModel) AddForUser(userID int64, codes ...string) error {
 type MockPermissionModel struct{}
 
 func (m MockPermissionModel) GetAllForUser(userID int64) (Permissions, error) {
-	return nil, nil
+	switch userID {
+	case 1:
+		return []string{"mocked:code"}, nil
+	case 3:
+		return []string{"another:code"}, nil
+	}
+	return []string{}, errors.New("any other errors")
 }
 
 func (m MockPermissionModel) AddForUser(userID int64, codes ...string) error {

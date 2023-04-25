@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestRecoverPanic(t *testing.T) {
@@ -188,6 +189,142 @@ func TestAuthenticate(t *testing.T) {
 		rr := httptest.NewRecorder()
 
 		handlerToTest.ServeHTTP(rr, req)
+
+		if rr.Code != e.expectedCode {
+			t.Errorf("%s: expected %d but got %d", e.name, e.expectedCode, rr.Code)
+		}
+	}
+}
+
+func TestRequiredAuthenticatedUser(t *testing.T) {
+	app := newTestApplication(t)
+
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+
+	handlerToTest := app.requireAuthenticatedUser(nextHandler)
+
+	tests := []struct {
+		name         string
+		user         *data.User
+		expectedCode int
+	}{
+		{
+			name:         "With the authenticated user",
+			expectedCode: http.StatusOK,
+			user: &data.User{
+				ID:        1,
+				CreatedAt: time.Now(),
+				Name:      "John Doe",
+				Email:     "johndoe@greenlight.test",
+				Activated: true,
+				Version:   0,
+			},
+		},
+		{
+			name:         "With an anonymous user",
+			expectedCode: http.StatusUnauthorized,
+			user:         data.AnonymousUser,
+		},
+	}
+
+	for _, e := range tests {
+
+		req := httptest.NewRequest("GET", "http://testing", nil)
+		rr := httptest.NewRecorder()
+
+		handlerToTest.ServeHTTP(rr, app.contextSetUser(req, e.user))
+
+		if rr.Code != e.expectedCode {
+			t.Errorf("%s: expected %d but got %d", e.name, e.expectedCode, rr.Code)
+		}
+	}
+}
+
+func TestRequireActivatedUser(t *testing.T) {
+	app := newTestApplication(t)
+
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+
+	handlerToTest := app.requireActivatedUser(nextHandler)
+
+	tests := []struct {
+		name         string
+		user         *data.User
+		expectedCode int
+	}{
+		{
+			name:         "With an unactivated user",
+			expectedCode: http.StatusOK,
+			user: &data.User{
+				Activated: true,
+			},
+		},
+		{
+			name:         "With an activated user",
+			expectedCode: http.StatusForbidden,
+			user: &data.User{
+				Activated: false,
+			},
+		},
+	}
+
+	for _, e := range tests {
+
+		req := httptest.NewRequest("GET", "http://testing", nil)
+		rr := httptest.NewRecorder()
+
+		handlerToTest.ServeHTTP(rr, app.contextSetUser(req, e.user))
+
+		if rr.Code != e.expectedCode {
+			t.Errorf("%s: expected %d but got %d", e.name, e.expectedCode, rr.Code)
+		}
+	}
+}
+
+func TestRequirePermission(t *testing.T) {
+	app := newTestApplication(t)
+
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+
+	handlerToTest := app.requirePermission("mocked:code", nextHandler)
+
+	tests := []struct {
+		name         string
+		user         *data.User
+		expectedCode int
+	}{
+		{
+			name:         "User with permission",
+			expectedCode: http.StatusOK,
+			user: &data.User{
+				ID:        1,
+				Activated: true,
+			},
+		},
+		{
+			name:         "User with wrong permission",
+			expectedCode: http.StatusForbidden,
+			user: &data.User{
+				ID:        3,
+				Activated: true,
+			},
+		},
+		{
+			name:         "Unexpected error from Model",
+			expectedCode: http.StatusInternalServerError,
+			user: &data.User{
+				ID:        2,
+				Activated: true,
+			},
+		},
+	}
+
+	for _, e := range tests {
+
+		req := httptest.NewRequest("GET", "http://testing", nil)
+		rr := httptest.NewRecorder()
+
+		handlerToTest.ServeHTTP(rr, app.contextSetUser(req, e.user))
 
 		if rr.Code != e.expectedCode {
 			t.Errorf("%s: expected %d but got %d", e.name, e.expectedCode, rr.Code)
