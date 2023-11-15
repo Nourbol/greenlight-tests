@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: greenlight
+    scrape_interval: 10s
+    static_configs:
+      - targets:
+          - api:4000
+
+rule_files:
+  - "./rules.yml"

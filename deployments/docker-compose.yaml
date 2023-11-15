@@ -1,0 +1,63 @@
+version: "3.8"
+
+services:
+
+  grafana:
+    image: grafana/grafana
+    user: root
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    container_name: greenlight-grafana
+    hostname: grafana
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus:/etc/prometheus
+    container_name: greenlight-prometheus
+    hostname: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  api:
+    image: github.com/nourbol/greenlight:latest
+    container_name: greenlight-api
+    ports:
+      - "4000:4000"
+    depends_on:
+      - db
+    entrypoint: [ "go", "run", "./cmd/api" ]
+
+  db:
+    image: postgres:13.5
+    container_name: greenlight-db
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: "greenlight"
+      POSTGRES_USER: "${DB_ROOT_USER}"
+      POSTGRES_PASSWORD: "${DB_ROOT_PASS}"
+
+  migrate:
+    image: migrate/migrate
+    container_name: greenlight-migrate
+    depends_on:
+      - db
+    restart: on-failure
+    volumes:
+      - ../migrations:/migrations
+    command: [ "-path", "/migrations", "-database", "${GREENLIGHT_DB_DSN}?sslmode=disable", "up" ]
+
+volumes:
+  greenlight:

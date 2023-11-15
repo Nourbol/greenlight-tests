@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func (app *application) routes() http.Handler {
@@ -29,7 +31,9 @@ func (app *application) routes() http.Handler {
 
 	router.Handler(http.MethodGet, "/debug/vars", expvar.Handler())
 
-	return app.metrics(app.recoverPanic(app.rateLimit(app.enableCORS(app.authenticate(router)))))
+	router.Handler(http.MethodGet, app.config.metrics.endpoint, promhttp.Handler())
+
+	return app.prometheusMetrics(app.debugMetrics(app.recoverPanic(app.rateLimit(app.enableCORS(app.authenticate(router))))))
 }
 
 func (app *application) routesTest() http.Handler {

@@ -1,0 +1,12 @@
+groups:
+  - name: Error ratio rules
+    rules:
+      - record: error_ratio
+        expr: sum(rate(processed_requests_total{status_code=~"5.."}[10m])) / sum(rate(processed_requests_total[10m]))
+
+      - alert: HighErrorRatio
+        expr: error_ratio > 0.5
+        for: 0m
+        annotations:
+          summary: "High proportion of 5XX errors"
+          description: "The proportion of 5XX errors is higher than 50% over the last 10 minutes."

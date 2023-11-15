@@ -4,11 +4,12 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
-	"net" // New import
+	"greenlight.bcc/internal/recorder"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
-	"sync" // New import
+	"sync"
 	"time"
 
 	"github.com/felixge/httpsnoop"
@@ -198,7 +199,7 @@ func (app *application) enableCORS(next http.Handler) http.Handler {
 	})
 }
 
-func (app *application) metrics(next http.Handler) http.Handler {
+func (app *application) debugMetrics(next http.Handler) http.Handler {
 	totalRequestsReceived := expvar.NewInt("total_requests_received")
 	totalResponsesSent := expvar.NewInt("total_responses_sent")
 	totalProcessingTimeMicroseconds := expvar.NewInt("total_processing_time_μs")
@@ -215,5 +216,24 @@ func (app *application) metrics(next http.Handler) http.Handler {
 		totalProcessingTimeMicroseconds.Add(metrics.Duration.Microseconds())
 
 		totalResponsesSentByStatus.Add(strconv.Itoa(metrics.Code), 1)
+	})
+}
+
+func (app *application) prometheusMetrics(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, app.config.metrics.endpoint) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		start := time.Now()
+
+		statusRecorder := recorder.RecordStatus(w)
+		next.ServeHTTP(statusRecorder, r)
+
+		responseTime := time.Since(start)
+		responseTimeHistogram.Observe(float64(responseTime.Milliseconds()))
+
+		processedRequestsCounter.WithLabelValues(strconv.Itoa(statusRecorder.StatusCode)).Inc()
 	})
 }
