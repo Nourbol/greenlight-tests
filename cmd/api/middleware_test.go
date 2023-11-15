@@ -331,3 +331,62 @@ func TestRequirePermission(t *testing.T) {
 		}
 	}
 }
+
+func TestEnableCORS(t *testing.T) {
+	app := newTestApplication(t)
+
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
+
+	handlerToTest := app.enableCORS(nextHandler)
+
+	expectedAllowedMethods := "OPTIONS, PUT, PATCH, DELETE"
+	expectedAllowedHeaders := "Authorization, Content-Type"
+
+	tests := []struct {
+		name           string
+		trustedOrigins []string
+		origin         string
+		method         string
+	}{
+		{
+			name:           "Trusted origin",
+			trustedOrigins: []string{"www.foo.bar", "www.bar.foo"},
+			origin:         "www.foo.bar",
+			method:         http.MethodGet,
+		},
+		{
+			name:           "Preflight request",
+			trustedOrigins: []string{"www.foo.bar", "www.bar.foo"},
+			origin:         "www.foo.bar",
+			method:         http.MethodOptions,
+		},
+	}
+
+	for _, e := range tests {
+		app.config.cors = struct{ trustedOrigins []string }{trustedOrigins: e.trustedOrigins}
+
+		req := httptest.NewRequest(e.method, "http://testing", nil)
+		req.Header.Set("Origin", e.origin)
+		req.Header.Set("Access-Control-Request-Method", e.method)
+		rr := httptest.NewRecorder()
+
+		handlerToTest.ServeHTTP(rr, req)
+
+		actualAllowedOrigin := rr.Header().Get("Access-Control-Allow-Origin")
+		if actualAllowedOrigin != e.origin {
+			t.Errorf("%s: expected %s but got %s", e.name, e.origin, actualAllowedOrigin)
+		}
+
+		if e.method == http.MethodOptions {
+			actualAllowedMethods := rr.Header().Get("Access-Control-Allow-Methods")
+			if actualAllowedMethods != expectedAllowedMethods {
+				t.Errorf("%s: expected %s but got %s", e.name, expectedAllowedMethods, actualAllowedMethods)
+			}
+
+			actualAllowedHeaders := rr.Header().Get("Access-Control-Allow-Headers")
+			if actualAllowedHeaders != expectedAllowedHeaders {
+				t.Errorf("%s: expected %s but got %s", e.name, expectedAllowedHeaders, actualAllowedHeaders)
+			}
+		}
+	}
+}
