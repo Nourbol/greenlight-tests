@@ -20,6 +20,7 @@ pipeline {
                     echo "PATH: ${env.PATH}"
                     def goHome = tool 'Go'
                     echo "${goHome}"
+                    sh "ls -l ${goHome}/bin"
                     sh "${goHome}/bin/go build -o api ./cmd/api"
                 }
             }
