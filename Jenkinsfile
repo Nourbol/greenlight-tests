@@ -21,7 +21,8 @@ pipeline {
                     def goHome = tool 'Go'
                     echo "${goHome}"
                     sh "ls -l ${goHome}/bin"
-                    sh "${goHome}/bin/go build -o api ./cmd/api"
+                    sh "cd ${goHome}/bin"
+                    sh "./go.sh build -o api ./cmd/api"
                 }
             }
         }
