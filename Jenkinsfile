@@ -19,8 +19,8 @@ pipeline {
                 script {
                     echo "PATH: ${env.PATH}"
                     def goHome = tool 'Go'
-                    echo '${goHome}'
-                    sh '${goHome}/bin/go build -o api ./cmd/api'
+                    echo "${goHome}"
+                    sh "${goHome}/bin/go build -o api ./cmd/api"
                 }
             }
         }
@@ -29,7 +29,7 @@ pipeline {
             steps {
                 script {
                     def goHome = tool 'Go'
-                    sh '${goHome}/bin/go test ./cmd/api'
+                    sh "${goHome}/bin/go test ./cmd/api"
                 }
             }
         }
