@@ -5,6 +5,14 @@ pipeline {
         go 'Go'
     }
 
+    stage('Print Environment') {
+            steps {
+                script {
+                    sh 'env'
+                }
+            }
+        }
+
     stages {
         stage('Build') {
             steps {
