@@ -17,7 +17,9 @@ pipeline {
         stage('Build') {
             steps {
                 script {
+                    echo "PATH: ${env.PATH}"
                     def goHome = tool 'Go'
+                    echo '${goHome}'
                     sh '${goHome}/bin/go build -o api ./cmd/api'
                 }
             }
