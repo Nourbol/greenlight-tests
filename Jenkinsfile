@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        go 'Go'
+    }
+
     environment {
         GOPATH = "${workspace}/go"
         PATH = "${env.GOPATH}/bin:${env.PATH}"
