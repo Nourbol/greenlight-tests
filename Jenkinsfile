@@ -1,4 +1,5 @@
 pipeline {
+    agent any
 
     environment {
         GOPATH = "${workspace}/go"
