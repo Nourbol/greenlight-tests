@@ -17,7 +17,8 @@ pipeline {
         stage('Build') {
             steps {
                 script {
-                    sh 'go build -o api ./cmd/api'
+                    def goHome = tool 'Go'
+                    sh '${goHome}/bin/go build -o api ./cmd/api'
                 }
             }
         }
@@ -25,7 +26,8 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    sh 'go test ./cmd/api'
+                    def goHome = tool 'Go'
+                    sh '${goHome}/bin/go test ./cmd/api'
                 }
             }
         }
