@@ -15,6 +15,8 @@ services:
     container_name: greenlight-grafana
     hostname: grafana
     restart: unless-stopped
+    networks:
+      - greenlight
 
   prometheus:
     image: prom/prometheus:latest
@@ -27,15 +29,22 @@ services:
     ports:
       - "9090:9090"
     restart: unless-stopped
+    networks:
+      - greenlight
 
   api:
-    image: github.com/nourbol/greenlight:latest
+    build: ../
     container_name: greenlight-api
+    environment:
+      GREENLIGHT_DB_DSN: ${GREENLIGHT_DB_DSN}
+      GREENLIGHT_SMTP_PASSWORD: ${GREENLIGHT_SMTP_PASSWORD}
     ports:
       - "4000:4000"
     depends_on:
       - db
     entrypoint: [ "go", "run", "./cmd/api" ]
+    networks:
+      - greenlight
 
   db:
     image: postgres:13.5
@@ -48,6 +57,8 @@ services:
       POSTGRES_DB: "greenlight"
       POSTGRES_USER: "${DB_ROOT_USER}"
       POSTGRES_PASSWORD: "${DB_ROOT_PASS}"
+    networks:
+      - greenlight
 
   migrate:
     image: migrate/migrate
@@ -57,7 +68,13 @@ services:
     restart: on-failure
     volumes:
       - ../migrations:/migrations
-    command: [ "-path", "/migrations", "-database", "${GREENLIGHT_DB_DSN}?sslmode=disable", "up" ]
+    command: [ "-path", "/migrations", "-database",
+               "${GREENLIGHT_DB_DSN}", "up" ]
+    networks:
+      greenlight:
 
 volumes:
+  greenlight:
+
+networks:
   greenlight:
