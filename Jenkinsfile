@@ -5,11 +5,6 @@ pipeline {
         go 'Go'
     }
 
-    environment {
-        GOPATH = "${workspace}/go"
-        PATH = "${env.GOPATH}/bin:${env.PATH}"
-    }
-
     stages {
         stage('Build') {
             steps {
