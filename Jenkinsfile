@@ -6,22 +6,10 @@ pipeline {
     }
 
     stages {
-        stage('Print Environment') {
-            steps {
-                script {
-                    sh 'env'
-                }
-            }
-        }
-        
         stage('Build') {
             steps {
                 script {
-                    echo "PATH: ${env.PATH}"
-                    def goHome = tool 'Go'
-                    echo "${goHome}"
-                    sh "ls -l ${goHome}/bin"
-                    sh "whoami"
+                    sh "go mod vendor"
                     sh "go build -o api ./cmd/api"
                 }
             }
@@ -30,8 +18,7 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    def goHome = tool 'Go'
-                    sh "${goHome}/bin/go test ./cmd/api"
+                    sh "go test ./cmd/api"
                 }
             }
         }
