@@ -1,6 +1,6 @@
 include .envrc
 
-## help: print this help message
+## help: print this help message.
 .PHONY: help
 help:
 	@echo 'Usage:'
